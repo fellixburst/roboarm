@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#132b36">
+  <meta name="description" content="机械臂与小车的中文模拟控制台。所有设备及相机画面均为模拟。">
+  <title>RoboLab · 机器人模拟控制台</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%278%27 fill=%27%23142c37%27/%3E%3Cpath d=%27M9 25h14M13 25v-7l7-7-4-5-5 4 5 7%27 fill=%27none%27 stroke=%27%2364ccba%27 stroke-width=%273%27 stroke-linecap=%27round%27/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/styles.css">
+  <script type="module" src="/app.js"></script>
+</head>
+<body>
+  <svg class="icon-defs" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs>
+    <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></symbol>
+    <symbol id="i-arm" viewBox="0 0 24 24"><path d="M4 21h16M8 21v-4l4-5-3-5 4-3 5 7-3 3-3-2M7 5l2 2M16 5l2-2 3 3-2 2"/><circle cx="12" cy="12" r="2"/><circle cx="9" cy="17" r="2"/></symbol>
+    <symbol id="i-car" viewBox="0 0 24 24"><rect x="5" y="6" width="14" height="12" rx="3"/><path d="M3 9v3m18-3v3M3 15v3m18-3v3M9 10h6M9 14h6M12 3v3"/></symbol>
+    <symbol id="i-camera" viewBox="0 0 24 24"><path d="M8 6l2-3h4l2 3h4v14H4V6z"/><circle cx="12" cy="12" r="4"/></symbol>
+    <symbol id="i-log" viewBox="0 0 24 24"><path d="M6 3h12v18H6zM9 7h6M9 11h6M9 15h4"/></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 007 0l3-3a5 5 0 00-7-7l-2 2M14 11a5 5 0 00-7 0l-3 3a5 5 0 007 7l2-2"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-8 9-8 9s-8-4-8-9V6zM8 12l3 3 5-6"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></symbol>
+    <symbol id="i-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 4l12 8-12 8z"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 7V3l-4 4a8 8 0 10 3 10M20 3h-5"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12m-5-5l5 5 5-5M4 16v5h16v-5"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6m0-10v1"/></symbol>
+  </defs></svg>
+  <aside class="sidebar">
+    <a href="#overview" class="brand" aria-label="RoboLab 总览"><span class="brand-mark"><svg class="icon"><use href="#i-arm"/></svg></span><span>RoboLab<span class="brand-sub">个人机器人工作台</span></span></a>
+    <div class="workspace-label">工作空间 <span>01</span></div>
+    <nav aria-label="主导航">
+      <button class="nav-item active" data-nav="overview"><svg class="icon"><use href="#i-grid"/></svg><span>工作台总览</span><svg class="icon nav-chevron"><use href="#i-chevron"/></svg></button>
+      <div class="nav-label">设备控制</div>
+      <button class="nav-item" data-nav="arm"><svg class="icon"><use href="#i-arm"/></svg><span>机械臂</span><i class="nav-dot" id="arm-nav-dot"></i></button>
+      <button class="nav-item" data-nav="car"><svg class="icon"><use href="#i-car"/></svg><span>移动小车</span><i class="nav-dot" id="car-nav-dot"></i></button>
+      <button class="nav-item" data-nav="camera"><svg class="icon"><use href="#i-camera"/></svg><span>相机预览</span></button>
+      <div class="nav-label">观察与调试</div>
+      <button class="nav-item" data-nav="logs"><svg class="icon"><use href="#i-log"/></svg><span>操作日志</span><span class="nav-count" id="nav-log-count">0</span></button>
+    </nav>
+    <div class="sidebar-bottom"><div class="environment-icon"><svg class="icon"><use href="#i-shield"/></svg></div><b>模拟实验环境</b><p>设备与画面均为模拟<br>未连接任何真实硬件</p><div class="environment-version"><span class="dot"></span>M1 · SIMULATOR <span>v1.0</span></div></div>
+  </aside>
+  <div class="app-shell">
+    <header class="topbar"><div class="breadcrumb">工作空间 <svg class="icon"><use href="#i-chevron"/></svg><span id="breadcrumb-current">工作台总览</span></div><div class="topbar-right"><span class="simulation-badge"><span class="dot"></span>模拟模式</span><span class="topbar-separator"></span><span class="connection-state" id="connection-state"><span class="dot"></span>正在连接</span><span class="avatar">R</span></div></header>
+    <main>
+      <section class="page-heading" id="overview"><div><div class="eyebrow">ROBOT CONTROL CENTER</div><h1 id="page-title">机器人控制台</h1><p>连接、观察与控制，在模拟环境中验证每一个动作。</p></div><button class="button button-outline" id="reconnect"><svg class="icon"><use href="#i-refresh"/></svg>重新连接</button></section>
+      <div class="connection-banner" id="connection-banner" hidden role="status"></div>
+      <section class="summary-grid" aria-label="运行总览">
+        <article class="summary-card"><span class="summary-icon teal"><svg class="icon"><use href="#i-link"/></svg></span><div><span class="summary-label">模拟设备</span><div class="summary-value"><strong id="online-count">—</strong><span>/ 3 在线</span></div></div><span class="mini-status" id="overview-online">等待反馈</span></article>
+        <article class="summary-card"><span class="summary-icon blue"><svg class="icon"><use href="#i-shield"/></svg></span><div><span class="summary-label">当前控制权</span><div class="summary-value"><strong id="ownership-summary">观察模式</strong></div></div><span class="summary-detail" id="session-label">会话建立中</span></article>
+        <article class="summary-card"><span class="summary-icon violet"><svg class="icon"><use href="#i-log"/></svg></span><div><span class="summary-label">命令反馈</span><div class="summary-value"><strong id="command-count">0</strong><span>条记录</span></div></div><span class="summary-detail" id="last-command-status">尚未发送命令</span></article>
+        <article class="summary-card"><span class="summary-icon amber"><svg class="icon"><use href="#i-refresh"/></svg></span><div><span class="summary-label">状态更新时间</span><div class="summary-value"><strong class="time-value" id="updated-time">—:—:—</strong></div></div><span class="summary-detail" id="state-age">等待服务状态</span></article>
+      </section>
+      <section class="control-grid" id="control-section">
+        <article class="card workspace-card">
+          <div class="card-header"><div><h2><span id="stage-device-title">SO101 机械臂</span><span class="tag tag-muted">模拟设备</span></h2><p id="stage-device-subtitle">6 自由度 · 关节空间控制</p></div><span class="status-badge" id="device-status"><span class="dot"></span>等待状态</span></div>
+          <div class="device-tabs" role="tablist" aria-label="选择控制设备"><button role="tab" aria-selected="true" class="device-tab active" data-device="arm-1"><svg class="icon"><use href="#i-arm"/></svg>机械臂 <span>SO101</span></button><button role="tab" aria-selected="false" class="device-tab" data-device="car-1"><svg class="icon"><use href="#i-car"/></svg>移动小车 <span>ROVER</span></button></div>
+          <div class="simulation-stage" id="simulation-stage"><div class="stage-label"><span class="dot"></span>实时模拟视图 <span>SIMULATION</span></div><svg id="device-scene" viewBox="0 0 760 390" role="img" aria-label="机械臂模拟姿态"></svg><div class="stage-coordinates" id="stage-coordinates">等待服务端设备反馈</div><div class="stage-scale">工作坐标系 <span>+X</span><span>+Y</span><span>+Z</span></div></div>
+          <div class="stage-footer"><span><span class="dot" id="feedback-dot"></span><span id="feedback-status">正在等待模拟反馈</span></span><span id="device-updated">状态时间 —</span></div>
+          <div class="device-metrics" id="device-metrics"><div><span>运行状态</span><strong id="metric-enabled">未启用</strong></div><div><span>控制权</span><strong id="metric-owner">未分配</strong></div><div><span>保护状态</span><strong id="metric-protection">等待反馈</strong></div></div>
+        </article>
+        <article class="card controls-card">
+          <div class="card-header"><div><h2>手动控制</h2><p>获取控制权后，主动启用设备</p></div><svg class="icon muted"><use href="#i-arm"/></svg></div>
+          <div class="control-access"><div class="access-status"><svg class="icon"><use href="#i-shield"/></svg><span id="access-text">当前处于观察模式</span></div><div class="access-buttons"><button class="button button-outline" id="acquire-control">获取控制权</button><button class="button button-primary" id="enable-control" disabled><svg class="icon"><use href="#i-play"/></svg>启用设备</button></div><button class="text-button" id="release-control" hidden>释放控制权</button></div>
+          <div id="arm-controls"><div class="section-label">关节点动 <span>单位 °</span></div><div class="joint-table" id="joint-table"></div><div class="control-setting"><label for="jog-step">点动步长</label><input id="jog-step" type="range" min="1" max="5" value="2" step="1"><output id="jog-step-value" for="jog-step">2°</output></div><div class="gripper-control"><span>夹爪</span><div><button class="button button-small button-outline motion-button" id="grip-open" disabled>张开</button><button class="button button-small button-outline motion-button" id="grip-close" disabled>闭合</button></div><span id="grip-position">—°</span></div></div>
+          <div id="car-controls" hidden><div class="section-label">方向控制 <span>按住移动 · 松开停止</span></div><div class="drive-pad"><button class="direction motion-button forward" data-direction="forward" aria-label="按住前进" disabled><svg class="icon"><use href="#i-arrow"/></svg><span>前进</span></button><button class="direction motion-button left" data-direction="left" aria-label="按住左转" disabled><svg class="icon"><use href="#i-arrow"/></svg><span>左转</span></button><button class="direction-center" id="pad-stop" aria-label="停止小车"><svg class="icon"><use href="#i-stop"/></svg></button><button class="direction motion-button right" data-direction="right" aria-label="按住右转" disabled><svg class="icon"><use href="#i-arrow"/></svg><span>右转</span></button><button class="direction motion-button backward" data-direction="backward" aria-label="按住后退" disabled><svg class="icon"><use href="#i-arrow"/></svg><span>后退</span></button></div><div class="control-setting"><label for="drive-speed">速度上限</label><input id="drive-speed" type="range" min="0.05" max="0.3" value="0.15" step="0.05"><output id="drive-speed-value" for="drive-speed">0.15 m/s</output></div><p class="drive-hint">按住方向按钮或方向键移动。松开、失焦或失联后停止，须重新启用。</p><div class="velocity-row"><div><span>线速度</span><b id="linear-velocity">0.00 <small>m/s</small></b></div><div><span>角速度</span><b id="angular-velocity">0.00 <small>rad/s</small></b></div></div></div>
+          <div class="control-stop"><button class="button button-stop" id="stop-device"><svg class="icon"><use href="#i-stop"/></svg>停止当前设备<span>ESC</span></button><p>软件停止 · 停止后需再次主动启用</p></div>
+        </article>
+      </section>
+      <section class="observation-grid">
+        <article class="card camera-card" id="camera-section"><div class="card-header"><div><h2>相机预览 <span class="tag tag-amber">模拟画面</span></h2><p>独立图像通道 · 2 FPS 上限</p></div><button class="button button-small button-outline" id="capture-frame"><svg class="icon"><use href="#i-download"/></svg>抓图</button></div><div class="camera-preview"><img id="camera-image" alt="模拟相机预览，非真实硬件画面"><div class="camera-overlay"><span><span class="dot"></span><b id="camera-state">等待模拟图像</b></span><span>CAM_01 / SIMULATED</span></div><div class="camera-corners" aria-hidden="true"></div></div><div class="camera-footer"><span>仅模拟图像，无摄像头访问</span><span id="capture-status">SVG FRAME</span></div></article>
+        <article class="card diagnostics-card"><div class="card-header"><div><h2>模拟调试</h2><p>注入异常，验证设备保护行为</p></div><span class="tag tag-muted">仅模拟</span></div><div class="diagnostic-description"><svg class="icon"><use href="#i-info"/></svg><p>异常发生后设备停止并禁用。连接恢复后，重新获取控制权与启用。</p></div><label class="field-label" for="fault-type">当前设备 · <span id="fault-device-name">SO101 机械臂</span></label><div class="injection-row"><select id="fault-type"><option value="disconnect">模拟设备断线</option><option value="reconnect">恢复设备连接</option><option value="fault">注入设备故障</option><option value="clear-fault">清除设备故障</option><option value="expire-command">发送过期命令</option></select><button class="button button-outline" id="inject-fault">执行</button></div><div class="protection-list"><div><svg class="icon"><use href="#i-shield"/></svg><span>服务端会话与控制租约监视</span><span class="tiny-dot"></span></div><div><svg class="icon"><use href="#i-shield"/></svg><span>设备端独立看门狗</span><span class="tiny-dot"></span></div><div><svg class="icon"><use href="#i-shield"/></svg><span>命令时效、序号与限位校验</span><span class="tiny-dot"></span></div></div><div class="diagnostic-result" id="diagnostic-result" role="status">等待调试操作</div></article>
+      </section>
+      <section class="card logs-card" id="logs-section"><div class="card-header"><div><h2>操作日志 <span class="tag tag-muted" id="log-count">0</span></h2><p>命令与事件均来自控制服务，接收不等于执行完成</p></div><label class="log-filter">显示<select id="log-filter"><option value="all">全部事件</option><option value="commands">命令生命周期</option><option value="errors">拒绝与异常</option></select></label></div><div class="log-table-wrap"><table class="log-table"><thead><tr><th>时间</th><th>设备 / 事件</th><th>操作</th><th>状态</th><th>详情</th></tr></thead><tbody id="log-rows"><tr><td colspan="5" class="empty-state">等待服务端事件。获取控制权后，即可开始模拟操作。</td></tr></tbody></table></div></section>
+      <footer class="page-footer"><span>RoboLab / M1 模拟控制台</span><span>模拟验收不代表真机标定、物理急停或自动抓取已完成</span><span>PROTOCOL v1</span></footer>
+    </main>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+</body>
+</html>
