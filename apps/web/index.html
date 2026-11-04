@@ -211,7 +211,9 @@
                   <span id="stage-device-title">SO101 机械臂</span
                   ><span class="tag tag-muted">模拟设备</span>
                 </h2>
-                <p id="stage-device-subtitle">6 自由度 · 关节空间控制</p>
+                <p id="stage-device-subtitle">
+                  简化五关节模拟模型 · 非 SO101 标定
+                </p>
               </div>
               <span class="status-badge" id="device-status"
                 ><span class="dot"></span>等待状态</span
@@ -259,6 +261,23 @@
                 ><span id="feedback-status">正在等待模拟反馈</span></span
               ><span id="device-updated">状态时间 —</span>
             </div>
+            <div class="end-effector-strip" id="end-effector-strip">
+              <div class="eef-label">
+                <span>末端位置</span><small>基座坐标系 · 模拟 FK</small>
+              </div>
+              <div>
+                <span class="axis-label axis-x">X 前</span
+                ><b id="end-effector-x">—</b><small>mm</small>
+              </div>
+              <div>
+                <span class="axis-label axis-y">Y 左</span
+                ><b id="end-effector-y">—</b><small>mm</small>
+              </div>
+              <div>
+                <span class="axis-label axis-z">Z 上</span
+                ><b id="end-effector-z">—</b><small>mm</small>
+              </div>
+            </div>
             <div class="device-metrics" id="device-metrics">
               <div>
                 <span>运行状态</span><strong id="metric-enabled">未启用</strong>
@@ -301,18 +320,135 @@
               </button>
             </div>
             <div id="arm-controls">
-              <div class="section-label">关节点动 <span>单位 °</span></div>
-              <div class="joint-table" id="joint-table"></div>
-              <div class="control-setting">
-                <label for="jog-step">点动步长</label
-                ><input
-                  id="jog-step"
-                  type="range"
-                  min="1"
-                  max="5"
-                  value="2"
-                  step="1"
-                /><output id="jog-step-value" for="jog-step">2°</output>
+              <div
+                class="arm-mode-tabs"
+                role="tablist"
+                aria-label="机械臂控制模式"
+              >
+                <button
+                  class="arm-mode-tab active"
+                  role="tab"
+                  aria-selected="true"
+                  data-arm-mode="joint"
+                >
+                  关节点动
+                </button>
+                <button
+                  class="arm-mode-tab"
+                  role="tab"
+                  aria-selected="false"
+                  data-arm-mode="cartesian"
+                  data-testid="cartesian-mode"
+                >
+                  坐标点动
+                </button>
+              </div>
+              <div id="joint-controls">
+                <div class="section-label">关节点动 <span>单位 °</span></div>
+                <div class="joint-table" id="joint-table"></div>
+                <div class="control-setting">
+                  <label for="jog-step">点动步长</label
+                  ><input
+                    id="jog-step"
+                    type="range"
+                    min="1"
+                    max="5"
+                    value="2"
+                    step="1"
+                  /><output id="jog-step-value" for="jog-step">2°</output>
+                </div>
+              </div>
+              <div id="cartesian-controls" hidden>
+                <div class="section-label">
+                  基座坐标系 <span>一次点击 · 一段直线</span>
+                </div>
+                <div class="cartesian-axis-grid">
+                  <div class="cartesian-axis-row">
+                    <span class="axis-label axis-x"
+                      >X <small>前 / 后</small></span
+                    ><button
+                      class="cartesian-button motion-button"
+                      data-cartesian-axis="x"
+                      data-cartesian-direction="minus"
+                      aria-label="X 向后点动"
+                      disabled
+                    >
+                      −X 向后</button
+                    ><button
+                      class="cartesian-button motion-button"
+                      data-cartesian-axis="x"
+                      data-cartesian-direction="plus"
+                      data-testid="cartesian-x-plus"
+                      aria-label="X 向前点动"
+                      disabled
+                    >
+                      +X 向前
+                    </button>
+                  </div>
+                  <div class="cartesian-axis-row">
+                    <span class="axis-label axis-y"
+                      >Y <small>左 / 右</small></span
+                    ><button
+                      class="cartesian-button motion-button"
+                      data-cartesian-axis="y"
+                      data-cartesian-direction="minus"
+                      aria-label="Y 向右点动"
+                      disabled
+                    >
+                      −Y 向右</button
+                    ><button
+                      class="cartesian-button motion-button"
+                      data-cartesian-axis="y"
+                      data-cartesian-direction="plus"
+                      aria-label="Y 向左点动"
+                      disabled
+                    >
+                      +Y 向左
+                    </button>
+                  </div>
+                  <div class="cartesian-axis-row">
+                    <span class="axis-label axis-z"
+                      >Z <small>上 / 下</small></span
+                    ><button
+                      class="cartesian-button motion-button"
+                      data-cartesian-axis="z"
+                      data-cartesian-direction="minus"
+                      aria-label="Z 向下点动"
+                      disabled
+                    >
+                      −Z 向下</button
+                    ><button
+                      class="cartesian-button motion-button"
+                      data-cartesian-axis="z"
+                      data-cartesian-direction="plus"
+                      aria-label="Z 向上点动"
+                      disabled
+                    >
+                      +Z 向上
+                    </button>
+                  </div>
+                </div>
+                <div class="cartesian-settings">
+                  <label for="cartesian-step"
+                    >步长<select id="cartesian-step">
+                      <option value="1">1 mm</option>
+                      <option value="2" selected>2 mm</option>
+                      <option value="5">5 mm</option>
+                      <option value="10">10 mm</option>
+                    </select></label
+                  ><label for="cartesian-speed"
+                    >末端速度<select id="cartesian-speed">
+                      <option value="5">5 mm/s</option>
+                      <option value="10" selected>10 mm/s</option>
+                      <option value="20">20 mm/s</option>
+                      <option value="30">30 mm/s</option>
+                    </select></label
+                  >
+                </div>
+                <p class="model-hint">
+                  简化模拟模型，非 SO101
+                  标定。保持末端俯仰与滚转；越界或不可达路径由设备拒绝。
+                </p>
               </div>
               <div class="gripper-control">
                 <span>夹爪</span>
@@ -420,80 +556,222 @@
           <article class="card camera-card" id="camera-section">
             <div class="card-header">
               <div>
-                <h2>相机预览 <span class="tag tag-amber">模拟画面</span></h2>
-                <p>独立图像通道 · 2 FPS 上限</p>
+                <h2>双目视觉 <span class="tag tag-amber">模拟画面</span></h2>
+                <p>同帧左右视图与深度 · 图像通道独立于控制</p>
               </div>
-              <button
-                class="button button-small button-outline"
-                id="capture-frame"
+              <div class="camera-actions">
+                <button
+                  class="button button-small button-outline"
+                  id="pause-camera"
+                  disabled
+                >
+                  暂停</button
+                ><button
+                  class="button button-small button-outline"
+                  id="capture-frame"
+                >
+                  <svg class="icon"><use href="#i-download" /></svg>抓图
+                </button>
+              </div>
+            </div>
+            <div class="stereo-toolbar">
+              <div
+                class="camera-view-tabs"
+                role="tablist"
+                aria-label="双目图像视图"
               >
-                <svg class="icon"><use href="#i-download" /></svg>抓图
-              </button>
+                <button
+                  class="camera-view-tab active"
+                  role="tab"
+                  aria-selected="true"
+                  data-camera-view="left"
+                >
+                  左目</button
+                ><button
+                  class="camera-view-tab"
+                  role="tab"
+                  aria-selected="false"
+                  data-camera-view="right"
+                >
+                  右目</button
+                ><button
+                  class="camera-view-tab"
+                  role="tab"
+                  aria-selected="false"
+                  data-camera-view="depth"
+                >
+                  深度
+                </button>
+              </div>
+              <span id="vision-frame-id">等待同步帧</span>
             </div>
             <div class="camera-preview">
-              <img id="camera-image" alt="模拟相机预览，非真实硬件画面" />
+              <img id="camera-image" alt="左目模拟相机预览，非真实硬件画面" />
               <div class="camera-overlay">
                 <span
                   ><span class="dot"></span
                   ><b id="camera-state">等待模拟图像</b></span
-                ><span>CAM_01 / SIMULATED</span>
+                ><span id="camera-view-label">LEFT / SIMULATED</span>
               </div>
               <div class="camera-corners" aria-hidden="true"></div>
             </div>
+            <div class="stereo-status">
+              <span id="vision-sync">等待同步状态</span
+              ><span id="vision-calibration">模拟标定参数 · 非真机</span>
+            </div>
+            <div class="vision-target-header">
+              <span
+                >模拟目标与距离 <small>合成真值 · 非视觉模型实测</small></span
+              ><span>像素框 / 深度</span>
+            </div>
+            <div class="vision-targets" id="vision-targets">
+              <p class="vision-empty">等待双目模拟目标</p>
+            </div>
+            <div class="camera-capture-row">
+              <div>
+                <button class="text-button" data-capture-view="left">
+                  抓左图</button
+                ><button class="text-button" data-capture-view="right">
+                  抓右图</button
+                ><button class="text-button" data-capture-view="depth">
+                  抓深度图
+                </button>
+              </div>
+              <label for="camera-exposure"
+                >曝光<input
+                  type="range"
+                  id="camera-exposure"
+                  min="0.1"
+                  max="50"
+                  value="8"
+                  step="0.1"
+                /><output id="camera-exposure-value" for="camera-exposure"
+                  >8 ms</output
+                ></label
+              >
+            </div>
             <div class="camera-footer">
-              <span>仅模拟图像，无摄像头访问</span
+              <span id="vision-parameters">仅模拟参数，无摄像头访问</span
               ><span id="capture-status">SVG FRAME</span>
             </div>
           </article>
-          <article class="card diagnostics-card">
-            <div class="card-header">
-              <div>
-                <h2>模拟调试</h2>
-                <p>注入异常，验证设备保护行为</p>
+          <div class="auxiliary-stack">
+            <article class="card diagnostics-card">
+              <div class="card-header">
+                <div>
+                  <h2>模拟调试</h2>
+                  <p>注入异常，验证设备保护行为</p>
+                </div>
+                <span class="tag tag-muted">仅模拟</span>
               </div>
-              <span class="tag tag-muted">仅模拟</span>
-            </div>
-            <div class="diagnostic-description">
-              <svg class="icon"><use href="#i-info" /></svg>
-              <p>
-                异常发生后设备停止并禁用。连接恢复后，重新获取控制权与启用。
-              </p>
-            </div>
-            <label class="field-label" for="fault-type"
-              >当前设备 ·
-              <span id="fault-device-name">SO101 机械臂</span></label
-            >
-            <div class="injection-row">
-              <select id="fault-type">
-                <option value="disconnect">模拟设备断线</option>
-                <option value="reconnect">恢复设备连接</option>
-                <option value="fault">注入设备故障</option>
-                <option value="clear-fault">清除设备故障</option>
-                <option value="expire-command">发送过期命令</option></select
-              ><button class="button button-outline" id="inject-fault">
-                执行
-              </button>
-            </div>
-            <div class="protection-list">
-              <div>
-                <svg class="icon"><use href="#i-shield" /></svg
-                ><span>服务端会话与控制租约监视</span
-                ><span class="tiny-dot"></span>
+              <div class="diagnostic-description">
+                <svg class="icon"><use href="#i-info" /></svg>
+                <p>
+                  异常发生后设备停止并禁用。连接恢复后，重新获取控制权与启用。
+                </p>
               </div>
-              <div>
-                <svg class="icon"><use href="#i-shield" /></svg
-                ><span>设备端独立看门狗</span><span class="tiny-dot"></span>
+              <label class="field-label" for="fault-type"
+                >当前设备 ·
+                <span id="fault-device-name">SO101 机械臂</span></label
+              >
+              <div class="injection-row">
+                <select id="fault-type">
+                  <option value="disconnect">模拟设备断线</option>
+                  <option value="reconnect">恢复设备连接</option>
+                  <option value="fault">注入设备故障</option>
+                  <option value="clear-fault">清除设备故障</option>
+                  <option value="expire-command">发送过期命令</option></select
+                ><button class="button button-outline" id="inject-fault">
+                  执行
+                </button>
               </div>
-              <div>
-                <svg class="icon"><use href="#i-shield" /></svg
-                ><span>命令时效、序号与限位校验</span
-                ><span class="tiny-dot"></span>
+              <div class="protection-list">
+                <div>
+                  <svg class="icon"><use href="#i-shield" /></svg
+                  ><span>服务端会话与控制租约监视</span
+                  ><span class="tiny-dot"></span>
+                </div>
+                <div>
+                  <svg class="icon"><use href="#i-shield" /></svg
+                  ><span>设备端独立看门狗</span><span class="tiny-dot"></span>
+                </div>
+                <div>
+                  <svg class="icon"><use href="#i-shield" /></svg
+                  ><span>命令时效、序号与限位校验</span
+                  ><span class="tiny-dot"></span>
+                </div>
               </div>
-            </div>
-            <div class="diagnostic-result" id="diagnostic-result" role="status">
-              等待调试操作
-            </div>
-          </article>
+              <div
+                class="diagnostic-result"
+                id="diagnostic-result"
+                role="status"
+              >
+                等待调试操作
+              </div>
+            </article>
+            <article class="card ptz-card" id="ptz-section">
+              <div class="card-header">
+                <div>
+                  <h2>
+                    双轴云台 <span class="tag tag-muted">接口已预留</span>
+                  </h2>
+                  <p>水平 Pan / 俯仰 Tilt · 设备型号待确定</p>
+                </div>
+                <span class="ptz-state" id="ptz-status">未接硬件</span>
+              </div>
+              <div class="ptz-controls">
+                <div>
+                  <span>Pan 水平轴</span><b>— °</b>
+                  <div>
+                    <button
+                      class="button button-small button-outline"
+                      data-ptz-axis="pan"
+                      disabled
+                      aria-label="云台向左，硬件未配置"
+                    >
+                      ←</button
+                    ><button
+                      class="button button-small button-outline"
+                      data-ptz-axis="pan"
+                      disabled
+                      aria-label="云台向右，硬件未配置"
+                    >
+                      →
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <span>Tilt 俯仰轴</span><b>— °</b>
+                  <div>
+                    <button
+                      class="button button-small button-outline"
+                      data-ptz-axis="tilt"
+                      disabled
+                      aria-label="云台向上，硬件未配置"
+                    >
+                      ↑</button
+                    ><button
+                      class="button button-small button-outline"
+                      data-ptz-axis="tilt"
+                      disabled
+                      aria-label="云台向下，硬件未配置"
+                    >
+                      ↓
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div class="ptz-footer">
+                <span>未配置连接、标定与安全限位</span
+                ><a
+                  href="https://github.com/fellixburst/roboarm/blob/dev/m1-simulator/docs/EXTENSIONS.md"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  >接入说明 ↗</a
+                >
+              </div>
+            </article>
+          </div>
         </section>
         <section class="card logs-card" id="logs-section">
           <div class="card-header">

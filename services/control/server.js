@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 import { resolve, extname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { WorkerBridge } from "./worker-bridge.js";
+import { StereoSimulator, ptzCapability } from "../../agents/device/stereo.js";
 import {
   TIMING,
   validateEnvelope,
@@ -52,6 +53,7 @@ export async function createControlServer({
   const config = { ...TIMING, ...timing };
   const adapter = new WorkerBridge();
   await adapter.ready;
+  const stereo = new StereoSimulator();
   const sessions = new Map();
   const commands = [];
   const commandCache = new Map();
@@ -140,6 +142,10 @@ export async function createControlServer({
       }),
       commands: commands.map(publicCommand),
       logs: structuredClone(logs),
+      capabilities: {
+        stereo: "/api/vision/stereo",
+        ptz: "/api/ptz",
+      },
     };
   }
   adapter.on("state", () => {
@@ -242,7 +248,32 @@ export async function createControlServer({
       }
       if (request.method === "GET" && path === "/api/state")
         return send(200, snapshot(request.headers["x-session-id"]));
-      if (request.method === "POST" && path === "/api/commands") {
+      if (request.method === "GET" && path === "/api/ptz")
+        return send(200, ptzCapability);
+      if (request.method === "GET" && path === "/api/vision/stereo") {
+        const camera = adapter
+          .getState()
+          .find((device) => device.id === "camera-1");
+        return send(200, stereo.metadata(camera));
+      }
+      if (request.method === "POST" && path === "/api/vision/stereo/control") {
+        const input = await bodyJSON(request);
+        sessionFor(input?.sessionId);
+        const camera = adapter
+          .getState()
+          .find((device) => device.id === "camera-1");
+        const result = stereo.control(input, camera);
+        log(
+          "STEREO_CONTROL",
+          `模拟双目操作：${input.action}${input.exposureMs === undefined ? "" : `，曝光 ${input.exposureMs} ms`}`,
+          { deviceId: "camera-1" },
+        );
+        return send(200, result);
+      }
+      if (
+        request.method === "POST" &&
+        ["/api/commands", "/api/ptz/commands"].includes(path)
+      ) {
         const command = await bodyJSON(request);
         let record;
         try {
@@ -316,6 +347,16 @@ export async function createControlServer({
           if (command.sequence <= session.sequence)
             throw protocolError("OUT_OF_ORDER", "拒绝乱序或已使用的序号");
           session.sequence = command.sequence;
+          if (path === "/api/ptz/commands" && command.deviceId !== "ptz-1")
+            throw protocolError(
+              "INVALID_DEVICE",
+              "云台端口只接受 ptz-1 设备命令",
+            );
+          if (command.deviceId === "ptz-1")
+            throw protocolError(
+              "NOT_CONFIGURED",
+              "双轴云台接口已预留，电机、标定和通信尚未配置",
+            );
           const device = adapter
             .getState()
             .find((d) => d.id === command.deviceId);
@@ -392,6 +433,27 @@ export async function createControlServer({
         });
         return send(200, { ok: true });
       }
+      const stereoFrame = path.match(
+        /^\/api\/camera\/(left|right|depth)\.svg$/,
+      );
+      if (request.method === "GET" && stereoFrame) {
+        const camera = adapter
+          .getState()
+          .find((device) => device.id === "camera-1");
+        const frame = stereo.image(
+          stereoFrame[1],
+          url.searchParams.get("frameId"),
+          camera,
+        );
+        response.writeHead(200, {
+          "Content-Type": "image/svg+xml; charset=utf-8",
+          "Cache-Control": "no-store",
+          "Content-Length": Buffer.byteLength(frame.svg),
+          "X-Frame-Id": frame.frameId,
+          "X-Captured-At": frame.capturedAt,
+        });
+        return response.end(frame.svg);
+      }
       if (request.method === "GET" && path === "/api/camera/frame.svg") {
         const camera = adapter.getState().find((d) => d.id === "camera-1");
         if (!camera?.connected || camera.fault) {
@@ -438,7 +500,14 @@ export async function createControlServer({
         });
       }
     } catch (error) {
-      return send(error.code === "BODY_TOO_LARGE" ? 413 : 400, {
+      const status =
+        {
+          BODY_TOO_LARGE: 413,
+          CAMERA_OFFLINE: 503,
+          FRAME_EXPIRED: 410,
+          FRAME_NOT_FOUND: 404,
+        }[error.code] ?? 400;
+      return send(status, {
         error: { code: error.code || "REQUEST_ERROR", message: error.message },
       });
     }

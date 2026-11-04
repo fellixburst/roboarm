@@ -19,6 +19,7 @@ const actionNames = {
   stop: "停止设备",
   release: "释放控制权",
   jog: "关节点动",
+  "cartesian-jog": "坐标点动",
   grip: "夹爪操作",
   drive: "方向控制",
 };
@@ -50,6 +51,13 @@ const state = {
   session: null,
   sequence: 0,
   selected: "arm-1",
+  armMode: "joint",
+  cameraView: "left",
+  vision: null,
+  visionReceivedAt: 0,
+  visionBusy: false,
+  visionControlBusy: false,
+  ptz: null,
   snapshot: null,
   receivedAt: 0,
   connected: false,
@@ -380,12 +388,32 @@ function renderControls() {
   $("#stop-device").disabled = !state.session;
   $("#pad-stop").disabled = !state.session;
   $("#inject-fault").disabled = !state.session;
+  const cameraAvailable = Boolean(
+    state.vision?.available && state.vision?.frames && visionFresh(),
+  );
   $("#capture-frame").disabled =
-    stale() ||
-    !isFresh(state.snapshot?.devices?.find((d) => d.id === "camera-1"));
+    !cameraAvailable || cameraImage.status !== "loaded";
+  $$("[data-capture-view]").forEach((button) => {
+    button.disabled = !cameraAvailable;
+  });
+  $("#pause-camera").disabled =
+    !state.session ||
+    !state.vision?.available ||
+    !visionFresh() ||
+    state.visionControlBusy;
+  $("#camera-exposure").disabled =
+    !state.session ||
+    !state.vision?.available ||
+    !visionFresh() ||
+    state.visionControlBusy;
   $$(".motion-button").forEach((button) => {
     button.disabled = !movingAllowed;
   });
+  if (!device?.endEffector || !device?.kinematics) {
+    $$("[data-cartesian-axis]").forEach((button) => {
+      button.disabled = true;
+    });
+  }
   const ownedText = owned
     ? device.enabled && !state.pendingStop.has(device.id)
       ? "控制已启用 · 请低速操作"
@@ -466,11 +494,19 @@ function render() {
   }
   $("#arm-controls").hidden = state.selected !== "arm-1";
   $("#car-controls").hidden = state.selected !== "car-1";
+  $("#end-effector-strip").hidden = state.selected !== "arm-1";
+  $("#joint-controls").hidden = state.armMode !== "joint";
+  $("#cartesian-controls").hidden = state.armMode !== "cartesian";
+  $$("[data-arm-mode]").forEach((button) => {
+    const active = button.dataset.armMode === state.armMode;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-selected", String(active));
+  });
   $("#stage-device-title").textContent = deviceNames[state.selected];
   $("#fault-device-name").textContent = deviceNames[state.selected];
   $("#stage-device-subtitle").textContent =
     state.selected === "arm-1"
-      ? "5 旋转关节 + 夹爪 · 关节空间控制"
+      ? "简化五关节模拟模型 · 非 SO101 标定"
       : "差速底盘 · 按住运行 · 松手停止";
   if (device) {
     $("#metric-enabled").textContent =
@@ -497,6 +533,12 @@ function render() {
       `状态时间 ${time(device.updatedAt ?? snapshot.updatedAt)}`;
     if (state.selected === "arm-1") {
       renderJoints(device);
+      for (const axis of ["x", "y", "z"]) {
+        const value = device.endEffector?.[`${axis}Mm`];
+        $(`#end-effector-${axis}`).textContent = Number.isFinite(value)
+          ? value.toFixed(2)
+          : "—";
+      }
       $("#grip-position").textContent =
         `${Number(device.gripper?.position ?? 0).toFixed(0)}%`;
     }
@@ -520,24 +562,50 @@ function renderScene(device) {
     return;
   }
   if (device.type === "arm") {
-    const joints = device.joints ?? [];
-    const shoulder = Number(joints[1]?.position ?? 0),
-      elbowAngle = Number(joints[2]?.position ?? 0),
-      wrist = Number(joints[3]?.position ?? 0),
-      baseAngle = Number(joints[0]?.position ?? 0);
-    const a1 = ((-137 + shoulder * 0.45) * Math.PI) / 180,
-      a2 = ((-40 + elbowAngle * 0.5) * Math.PI) / 180,
-      a3 = ((-12 + wrist * 0.4) * Math.PI) / 180;
-    const p0 = [371, 281],
-      p1 = [p0[0] + Math.cos(a1) * 112, p0[1] + Math.sin(a1) * 112],
-      p2 = [p1[0] + Math.cos(a2) * 110, p1[1] + Math.sin(a2) * 110],
-      p3 = [p2[0] + Math.cos(a3) * 47, p2[1] + Math.sin(a3) * 47];
-    const p = (v) => v.map((n) => n.toFixed(2)).join(",");
-    const grip = (Number(device.gripper?.position ?? 50) / 100) * 13 + 3;
-    scene.innerHTML = `${grid}<ellipse cx="376" cy="318" rx="107" ry="20" fill="#061c23" opacity=".5" filter="url(#shadow)"/><g transform="translate(${(baseAngle * 0.13).toFixed(2)} 0)"><path d="M310 309L363 330 427 307 373 288z" fill="#41636b" stroke="#789592" stroke-width="1"/><path d="M310 309v9l53 21v-9M363 339l64-23v-9" fill="#234852" stroke="#456d72"/><path d="M348 306v-29q22-16 47 0v29q-22 13-47 0" fill="url(#darkMetal)" stroke="#729a9c"/><ellipse cx="371" cy="276" rx="24" ry="9" fill="#a0beb7"/><ellipse cx="371" cy="278" rx="19" ry="6" fill="#377f77"/><path d="M${p(p0)}L${p(p1)}" fill="none" stroke="#193d48" stroke-width="34" stroke-linecap="round"/><path d="M${p(p0)}L${p(p1)}" fill="none" stroke="url(#metal)" stroke-width="27" stroke-linecap="round"/><path d="M${p(p1)}L${p(p2)}" fill="none" stroke="#20414a" stroke-width="28" stroke-linecap="round"/><path d="M${p(p1)}L${p(p2)}" fill="none" stroke="url(#metal)" stroke-width="22" stroke-linecap="round"/><path d="M${p(p2)}L${p(p3)}" fill="none" stroke="url(#darkMetal)" stroke-width="19" stroke-linecap="round"/>${[p0, p1, p2].map((point, i) => `<circle cx="${point[0]}" cy="${point[1]}" r="${i === 0 ? 20 : i === 1 ? 17 : 14}" fill="url(#darkMetal)" stroke="#a0c5bf" stroke-width="1.3"/><circle cx="${point[0]}" cy="${point[1]}" r="${i === 0 ? 12 : i === 1 ? 10 : 8}" fill="url(#accent)" stroke="#90d9c6" stroke-width=".8"/><circle cx="${point[0]}" cy="${point[1]}" r="3" fill="#216d65"/>`).join("")}<g transform="translate(${p3[0]} ${p3[1]}) rotate(${(a3 * 180) / Math.PI})"><rect x="-5" y="-11" width="21" height="22" rx="3" fill="url(#metal)"/><path d="M13 -7L28 ${-grip} 39 ${-grip + 3}M13 7L28 ${grip} 39 ${grip - 3}" fill="none" stroke="#91b4af" stroke-width="6" stroke-linejoin="round"/><path d="M39 ${-grip + 3}v6M39 ${grip - 3}v-6" stroke="#4d7779" stroke-width="4"/></g><path d="M${p(p0)}Q${p0[0] + 21},${p0[1] - 23} ${p1[0] + 10},${p1[1] + 8}T${p2[0] - 2},${p2[1] + 10}" fill="none" stroke="#183e48" stroke-width="3" stroke-linecap="round"/></g><g fill="#6c9ca4" font-size="7" font-family="monospace"><path d="M${p1[0] - 20} ${p1[1]}h-43l-20-16" fill="none" stroke="#638d95" stroke-width=".6"/><text x="${p1[0] - 111}" y="${p1[1] - 21}">JOINT 02</text><path d="M${p2[0] + 14} ${p2[1]}h49l20 17" fill="none" stroke="#638d95" stroke-width=".6"/><text x="${p2[0] + 64}" y="${p2[1] + 29}">SO101 / SIM</text></g><circle cx="371" cy="337" r="3" fill="#55b6a0"/><circle cx="371" cy="337" r="11" fill="none" stroke="#55b6a0" stroke-opacity=".4"/>`;
-    scene.setAttribute("aria-label", "SO101 机械臂的服务端模拟关节姿态");
-    $("#stage-coordinates").innerHTML =
-      `BASE J1 ${baseAngle.toFixed(1)}°<br>GRIPPER ${Number(device.gripper?.position ?? 0).toFixed(0)}% / SIM`;
+    const chain = device.linkPointsMm;
+    if (!Array.isArray(chain) || chain.length < 5) {
+      scene.innerHTML = `${grid}<text x="380" y="210" text-anchor="middle" class="stage-empty">等待模拟正向运动学反馈</text>`;
+      $("#stage-coordinates").textContent = "等待基座坐标系反馈";
+      return;
+    }
+    // One fixed linear projection for every link, tool point and coordinate axis.
+    // Cartesian straight lines remain straight in this projection.
+    const project = ({ xMm, yMm, zMm }) => [
+      300 + xMm * 0.9 - yMm * 0.6,
+      320 + xMm * 0.22 + yMm * 0.22 - zMm * 0.86,
+    ];
+    const points = chain.map(project);
+    const [base, shoulder, elbow, wrist, tool] = points;
+    const p = (point) => point.map((value) => value.toFixed(2)).join(",");
+    const segments = [
+      [shoulder, elbow, 25],
+      [elbow, wrist, 21],
+      [wrist, tool, 17],
+    ];
+    const grip = (Number(device.gripper?.position ?? 50) / 100) * 11 + 3;
+    const toolAngle =
+      (Math.atan2(tool[1] - wrist[1], tool[0] - wrist[0]) * 180) / Math.PI;
+    const axes = [
+      { point: { xMm: 65, yMm: 0, zMm: 0 }, color: "#c58b7c", label: "+X 前" },
+      { point: { xMm: 0, yMm: 65, zMm: 0 }, color: "#78bba1", label: "+Y 左" },
+      { point: { xMm: 0, yMm: 0, zMm: 65 }, color: "#83aacc", label: "+Z 上" },
+    ];
+    const axisSvg = axes
+      .map(({ point, color, label }) => {
+        const end = project(point);
+        return `<path d="M${p(base)}L${p(end)}" stroke="${color}" stroke-width="1.2"/><circle cx="${end[0]}" cy="${end[1]}" r="2" fill="${color}"/><text x="${end[0] + 5}" y="${end[1] - 5}" fill="${color}" font-size="8">${label}</text>`;
+      })
+      .join("");
+    const modelLabel = `<g fill="#6c9ca4" font-size="7" font-family="monospace"><path d="M${elbow[0] - 17} ${elbow[1]}h-43l-20-16" fill="none" stroke="#638d95" stroke-width=".6"/><text x="${elbow[0] - 105}" y="${elbow[1] - 21}">JOINT 02</text><path d="M${tool[0] + 12} ${tool[1]}h36l16-18" fill="none" stroke="#638d95" stroke-width=".6"/><text x="${tool[0] + 48}" y="${tool[1] - 26}">TCP / BASE</text></g>`;
+    scene.innerHTML = `${grid}<ellipse cx="${base[0] + 10}" cy="${base[1] + 9}" rx="100" ry="20" fill="#061c23" opacity=".5" filter="url(#shadow)"/><path d="M${base[0] - 51} ${base[1]}l48 17 62-20-49-16z" fill="#41636b" stroke="#789592"/><path d="M${base[0] - 51} ${base[1]}v8l48 17v-8m0 8 62-20v-8" fill="#234852" stroke="#456d72"/><path d="M${p(base)}L${p(shoulder)}" stroke="url(#darkMetal)" stroke-width="31" stroke-linecap="round"/><path d="M${base[0] - 14} ${base[1] - 5}L${shoulder[0] - 14} ${shoulder[1] + 6}" stroke="#749c9c" stroke-width="2" opacity=".5"/>${segments.map(([a, b, width]) => `<path d="M${p(a)}L${p(b)}" fill="none" stroke="#193d48" stroke-width="${width + 6}" stroke-linecap="round"/><path d="M${p(a)}L${p(b)}" fill="none" stroke="url(#metal)" stroke-width="${width}" stroke-linecap="round"/>`).join("")}${[shoulder, elbow, wrist].map((point, i) => `<circle cx="${point[0]}" cy="${point[1]}" r="${19 - i * 3}" fill="url(#darkMetal)" stroke="#a0c5bf" stroke-width="1.3"/><circle cx="${point[0]}" cy="${point[1]}" r="${11 - i * 2}" fill="url(#accent)" stroke="#90d9c6" stroke-width=".8"/><circle cx="${point[0]}" cy="${point[1]}" r="3" fill="#216d65"/>`).join("")}<g transform="translate(${tool[0]} ${tool[1]}) rotate(${toolAngle})"><rect x="-5" y="-9" width="15" height="18" rx="3" fill="url(#metal)"/><path d="M6 -6L21 ${-grip} 30 ${-grip + 2}M6 6L21 ${grip} 30 ${grip - 2}" fill="none" stroke="#91b4af" stroke-width="5" stroke-linejoin="round"/></g><circle cx="${tool[0]}" cy="${tool[1]}" r="3" fill="#c5f4df" stroke="#4bbf9e"/><g font-family="sans-serif">${axisSvg}</g>${modelLabel}`;
+    scene.setAttribute(
+      "aria-label",
+      "简化模拟机械臂的真实 FK 链与基座 XYZ 坐标投影，非 SO101 标定",
+    );
+    const eef = device.endEffector;
+    $("#stage-coordinates").innerHTML = eef
+      ? `BASE / TCP · mm<br>X ${eef.xMm.toFixed(2)} / Y ${eef.yMm.toFixed(2)} / Z ${eef.zMm.toFixed(2)}<br>SIMPLIFIED MODEL · 非 SO101 标定`
+      : "等待末端坐标反馈";
   } else {
     const x = Number(device.pose?.x ?? 0),
       y = Number(device.pose?.y ?? 0),
@@ -673,6 +741,24 @@ $("#joint-table").addEventListener("click", (event) => {
     speed: Math.min(15, joint?.maxSpeed ?? 15),
   });
 });
+$$("[data-arm-mode]").forEach((button) =>
+  button.addEventListener("click", () => {
+    state.armMode = button.dataset.armMode;
+    render();
+  }),
+);
+$$("[data-cartesian-axis]").forEach((button) =>
+  button.addEventListener("click", () => {
+    if (button.disabled || state.selected !== "arm-1" || !canMove()) return;
+    const step = Number($("#cartesian-step").value);
+    void sendCommand("cartesian-jog", {
+      frame: "base",
+      axis: button.dataset.cartesianAxis,
+      deltaMm: button.dataset.cartesianDirection === "plus" ? step : -step,
+      speedMmS: Number($("#cartesian-speed").value),
+    });
+  }),
+);
 $("#jog-step").addEventListener("input", () => {
   $("#jog-step-value").textContent = `${$("#jog-step").value}°`;
 });
@@ -829,47 +915,221 @@ $("#inject-fault").addEventListener("click", async () => {
   }
 });
 $("#log-filter").addEventListener("change", renderLogs);
-$("#camera-image").addEventListener("load", () => {
-  frameBusy = false;
-  $("#camera-state").textContent = "模拟画面";
-});
-$("#camera-image").addEventListener("error", () => {
-  frameBusy = false;
-  $("#camera-state").textContent = "图像通道暂不可用";
-});
-let frameBusy = false;
-function refreshCamera() {
-  if (document.hidden || frameBusy) return;
-  const camera = state.snapshot?.devices?.find(
-    (device) => device.id === "camera-1",
+const cameraImage = { requestedUrl: null, displayedUrl: null, status: "empty" };
+function visionFresh() {
+  return Boolean(
+    state.visionReceivedAt && performance.now() - state.visionReceivedAt < 1800,
   );
-  if (!isFresh(camera)) {
-    $("#camera-state").textContent = "模拟相机失联";
+}
+function cameraFrameUrl(view = state.cameraView) {
+  return state.vision?.frames?.[view] ?? null;
+}
+function updateCameraImage() {
+  const image = $("#camera-image"),
+    url = cameraFrameUrl();
+  if (!url || !visionFresh()) return;
+  const fullUrl = new URL(url, location.origin).href;
+  if (cameraImage.requestedUrl === fullUrl) return;
+  cameraImage.requestedUrl = fullUrl;
+  cameraImage.status = "loading";
+  image.hidden = true;
+  image.src = url;
+}
+function renderVision() {
+  const vision = state.vision,
+    fresh = visionFresh();
+  const available = Boolean(vision?.available && fresh);
+  const paused = vision?.status === "paused";
+  const viewLabels = { left: "左目", right: "右目", depth: "深度" };
+  if (available) updateCameraImage();
+  $("#camera-view-label").textContent =
+    `${state.cameraView.toUpperCase()} / SIMULATED`;
+  $("#camera-image").alt =
+    `${viewLabels[state.cameraView]}模拟画面，非真实硬件图像`;
+  $$("[data-camera-view]").forEach((button) => {
+    const active = button.dataset.cameraView === state.cameraView;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-selected", String(active));
+  });
+  $("#camera-state").textContent = !fresh
+    ? "视觉通道失联"
+    : !available
+      ? "模拟相机离线"
+      : cameraImage.status === "error"
+        ? "图像不可用或已过期"
+        : cameraImage.status !== "loaded"
+          ? paused
+            ? "冻结帧加载中"
+            : "同步帧加载中"
+          : paused
+            ? "模拟画面已暂停 · 冻结帧"
+            : "双目模拟画面";
+  $("#vision-frame-id").textContent = available
+    ? `${vision.frameId}${cameraImage.status === "loaded" ? "" : " · 待显示"} · ${time(vision.capturedAt ?? vision.updatedAt)}`
+    : "无有效同步帧";
+  $("#pause-camera").textContent = paused ? "恢复" : "暂停";
+  const sync = $("#vision-sync");
+  sync.textContent = !available
+    ? "同步不可用"
+    : paused
+      ? "左右同帧 · 已冻结"
+      : `左右同帧 · 偏差 ${Number(vision.synchronization?.skewMs ?? 0).toFixed(1)} ms`;
+  sync.classList.toggle("unavailable", !available);
+  const calibration = vision?.calibration;
+  $("#vision-calibration").textContent =
+    calibration?.status === "simulated"
+      ? "模拟标定参数 · 非真机标定"
+      : "尚无有效标定";
+  $("#vision-parameters").textContent = calibration
+    ? `模拟基线 ${calibration.baselineMm} mm · 焦距 ${calibration.focalLengthPx} px · 帧曝光 ${Number(vision.frameExposureMs ?? vision.exposureMs).toFixed(1)} ms · 外参未配置`
+    : "仅模拟参数，无摄像头访问";
+  if (document.activeElement !== $("#camera-exposure")) {
+    $("#camera-exposure").value = vision?.exposureMs ?? 8;
+    $("#camera-exposure-value").textContent =
+      `${Number(vision?.exposureMs ?? 8).toFixed(1)} ms`;
+  }
+  const targets = available ? (vision?.detections ?? []) : [];
+  $("#vision-targets").innerHTML = targets.length
+    ? targets
+        .map((target) => {
+          const b = target.bbox,
+            r = target.rightBbox;
+          const bboxText = (box) =>
+            box ? `${box.x}, ${box.y}, ${box.width}×${box.height}` : "—";
+          return `<div class="vision-target" data-target-id="${escapeHtml(target.id)}"><span class="vision-target-name"><i class="target-swatch"></i>${escapeHtml(target.label)}</span><span class="vision-target-box">L [${escapeHtml(bboxText(b))}] px<br>R [${escapeHtml(bboxText(r))}] px</span><span class="vision-target-depth">${Number(target.depthMm).toFixed(0)}<small>mm</small></span></div>`;
+        })
+        .join("")
+    : '<p class="vision-empty">暂无有效模拟目标，等待双目图像通道</p>';
+  if (!available) {
+    $("#camera-image").hidden = true;
+  } else {
+    $("#camera-image").hidden = cameraImage.status !== "loaded";
+  }
+  renderControls();
+}
+async function refreshCamera() {
+  if (document.hidden || state.visionBusy) return;
+  state.visionBusy = true;
+  try {
+    const vision = await request("/api/vision/stereo");
+    state.vision = vision;
+    state.visionReceivedAt = performance.now();
+    renderVision();
+  } catch {
+    if (!visionFresh()) {
+      renderVision();
+    }
+  } finally {
+    state.visionBusy = false;
+  }
+}
+async function controlVision(action, options = {}) {
+  if (!state.session || state.visionControlBusy) return;
+  state.visionControlBusy = true;
+  renderControls();
+  try {
+    state.vision = await request("/api/vision/stereo/control", {
+      method: "POST",
+      body: JSON.stringify({
+        sessionId: state.session.sessionId,
+        action,
+        ...options,
+      }),
+    });
+    state.visionReceivedAt = performance.now();
+    renderVision();
+    toast(
+      action === "pause"
+        ? "双目图像已暂停，运动控制保持独立。"
+        : action === "resume"
+          ? "双目图像已恢复。"
+          : "模拟曝光参数已更新。",
+    );
+  } catch (error) {
+    toast(`图像通道：${error.message}`, true);
+  } finally {
+    state.visionControlBusy = false;
+    renderControls();
+  }
+}
+async function captureFrame(view = state.cameraView) {
+  const url = cameraFrameUrl(view),
+    frameId = state.vision?.frameId;
+  if (!url || !visionFresh()) {
+    toast("当前没有可抓取的同步模拟帧。", true);
     return;
   }
-  frameBusy = true;
-  const image = $("#camera-image");
-  image.src = `/api/camera/frame.svg?frame=${Date.now()}`;
-}
-$("#capture-frame").addEventListener("click", async () => {
   try {
-    const response = await fetch("/api/camera/frame.svg", {
-      cache: "no-store",
-    });
-    if (!response.ok) throw new Error("模拟抓图失败");
+    const response = await fetch(url, { cache: "no-store" });
+    if (!response.ok) throw new Error("同步帧不可用或已过期，请刷新后重试");
     const blob = await response.blob(),
-      url = URL.createObjectURL(blob),
+      downloadUrl = URL.createObjectURL(blob),
       anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = `robolab-simulated-${new Date().toISOString().replace(/[:.]/g, "-")}.svg`;
+    anchor.href = downloadUrl;
+    anchor.download = `robolab-simulated-${frameId}-${view}.svg`;
     anchor.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-    $("#capture-status").textContent = `已保存模拟帧 ${time(new Date())}`;
-    toast("已保存模拟相机 SVG 画面。");
+    setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
+    $("#capture-status").textContent =
+      `已保存 ${view.toUpperCase()} / ${frameId}`;
+    toast("已保存对应同步帧的模拟图像。");
   } catch (error) {
     toast(error.message, true);
   }
+}
+$("#camera-image").addEventListener("load", () => {
+  cameraImage.displayedUrl = $("#camera-image").currentSrc;
+  cameraImage.status =
+    cameraImage.displayedUrl === cameraImage.requestedUrl
+      ? "loaded"
+      : "loading";
+  renderVision();
 });
+$("#camera-image").addEventListener("error", () => {
+  cameraImage.status = "error";
+  renderVision();
+});
+$$("[data-camera-view]").forEach((button) =>
+  button.addEventListener("click", () => {
+    state.cameraView = button.dataset.cameraView;
+    renderVision();
+  }),
+);
+$("#pause-camera").addEventListener(
+  "click",
+  () =>
+    void controlVision(state.vision?.status === "paused" ? "resume" : "pause"),
+);
+$("#camera-exposure").addEventListener("input", () => {
+  $("#camera-exposure-value").textContent =
+    `${Number($("#camera-exposure").value).toFixed(1)} ms`;
+});
+$("#camera-exposure").addEventListener(
+  "change",
+  () =>
+    void controlVision("set-exposure", {
+      exposureMs: Number($("#camera-exposure").value),
+    }),
+);
+$("#capture-frame").addEventListener("click", () => void captureFrame());
+$$("[data-capture-view]").forEach((button) =>
+  button.addEventListener(
+    "click",
+    () => void captureFrame(button.dataset.captureView),
+  ),
+);
+async function readPtzCapability() {
+  try {
+    state.ptz = await request("/api/ptz");
+    $("#ptz-status").textContent =
+      state.ptz.configured === false ? "未接硬件" : "接口待现场验收";
+    // M1 reserves pan/tilt capability only; movement remains disabled in every state.
+    $$("[data-ptz-axis]").forEach((button) => {
+      button.disabled = true;
+    });
+  } catch {
+    $("#ptz-status").textContent = "预留接口暂不可用";
+  }
+}
 const testIds = {
   "#acquire-control": "acquire-control",
   "#enable-control": "enable-control",
@@ -896,4 +1156,9 @@ setInterval(() => {
   renderFreshness();
   renderControls();
 }, 250);
+void refreshCamera();
+void readPtzCapability();
 setInterval(refreshCamera, 600);
+setInterval(() => {
+  if (!visionFresh()) renderVision();
+}, 400);

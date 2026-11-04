@@ -4,12 +4,79 @@
   "watchdogMs": 450,
   "maxLeaseMs": 1500,
   "joints": [
-    {"id":"joint-1","name":"底座旋转","position":0,"min":-150,"max":150,"maxSpeed":30},
-    {"id":"joint-2","name":"肩关节","position":-20,"min":-90,"max":90,"maxSpeed":25},
-    {"id":"joint-3","name":"肘关节","position":45,"min":-120,"max":120,"maxSpeed":25},
-    {"id":"joint-4","name":"腕部俯仰","position":-25,"min":-90,"max":90,"maxSpeed":30},
-    {"id":"joint-5","name":"腕部旋转","position":0,"min":-150,"max":150,"maxSpeed":30}
+    {
+      "id": "joint-1",
+      "name": "底座旋转",
+      "position": 0,
+      "min": -150,
+      "max": 150,
+      "maxSpeed": 30
+    },
+    {
+      "id": "joint-2",
+      "name": "肩关节",
+      "position": -20,
+      "min": -90,
+      "max": 90,
+      "maxSpeed": 25
+    },
+    {
+      "id": "joint-3",
+      "name": "肘关节",
+      "position": 45,
+      "min": -120,
+      "max": 120,
+      "maxSpeed": 25
+    },
+    {
+      "id": "joint-4",
+      "name": "腕部俯仰",
+      "position": -25,
+      "min": -90,
+      "max": 90,
+      "maxSpeed": 30
+    },
+    {
+      "id": "joint-5",
+      "name": "腕部旋转",
+      "position": 0,
+      "min": -150,
+      "max": 150,
+      "maxSpeed": 30
+    }
   ],
-  "gripper": {"position":50,"min":0,"max":100,"maxSpeed":60},
-  "car": {"maxLinear":0.3,"maxAngular":0.8}
+  "gripper": {
+    "position": 50,
+    "min": 0,
+    "max": 100,
+    "maxSpeed": 60
+  },
+  "car": {
+    "maxLinear": 0.3,
+    "maxAngular": 0.8
+  },
+  "kinematics": {
+    "mode": "simulation",
+    "name": "简化五关节模拟模型（非 SO101 标定）",
+    "frame": "base",
+    "axes": {
+      "x": "前",
+      "y": "左",
+      "z": "上"
+    },
+    "baseHeightMm": 100,
+    "upperArmMm": 120,
+    "forearmMm": 120,
+    "toolMm": 60,
+    "maxStepMm": 10,
+    "maxSpeedMmS": 30,
+    "interpolationMm": 0.25,
+    "workspace": {
+      "xMm": [-330, 330],
+      "yMm": [-330, 330],
+      "zMm": [0, 360],
+      "minRadiusMm": 60,
+      "maxRadiusMm": 330
+    }
+  }
 }

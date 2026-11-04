@@ -83,6 +83,9 @@ test('lease heartbeat cannot re-enable a stopped device or replay an old generat
   delayed.sequence = 100;
   assert.throws(() => r.adapter.execute(delayed, { expiresInMs: 1000, generation }), { code: 'STALE_GENERATION' });
   assert.deepEqual(r.get('car-1').velocity, { linear: 0, angular: 0 });
+  const convergentStop = { ...r.command('car-1', 'stop'), sequence: 101 };
+  assert.equal(r.adapter.execute(convergentStop, { expiresInMs: 1000, generation }).status, 'completed');
+  assert.equal(r.get('car-1').enabled, false);
 });
 
 test('device rejects a deadline that elapsed in transport even with positive TTL', () => {

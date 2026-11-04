@@ -5,10 +5,18 @@ export const ACTIONS = new Set([
   "stop",
   "release",
   "jog",
+  "cartesian-jog",
   "grip",
   "drive",
+  "ptz-jog",
 ]);
-export const MOTION_ACTIONS = new Set(["jog", "grip", "drive"]);
+export const MOTION_ACTIONS = new Set([
+  "jog",
+  "cartesian-jog",
+  "grip",
+  "drive",
+  "ptz-jog",
+]);
 export const TIMING = Object.freeze({
   heartbeatMs: 250,
   sessionTimeoutMs: 1800,

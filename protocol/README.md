@@ -1,6 +1,6 @@
 # M1 控制协议 v1
 
-仅用于模拟。所有时间阈值来自 `protocol/validation.js`；模拟关节限位和速度从 `agents/device/config.json` 读取，不是 SO101 真机标定值。
+仅运行模拟设备，云台作为未配置能力预留。会话与命令时限来自 `protocol/validation.js`；模拟运动学、关节限位和速度从 `agents/device/config.json` 读取，不是 SO101 真机标定值。
 
 ## HTTP 资源
 
@@ -16,6 +16,11 @@
 | POST `/api/commands` | 下方命令信封 | 同步完成 `200`；目标仍在运动 `202`；拒绝 `400` |
 | POST `/api/simulate` | `{sessionId,deviceId,type}` | 注入 `disconnect/reconnect/fault/clear-fault` |
 | GET `/api/camera/frame.svg` | 无 | 最大 960×540 SVG 模拟画面，服务端共享缓存 500 ms；离线 `503` |
+| GET `/api/vision/stereo` | 无 | 同帧左右图与深度 URL、合成目标、模拟标定与同步状态 |
+| GET `/api/camera/left.svg`、`right.svg`、`depth.svg` | 可选 `frameId` | 指定帧的图像；过期帧 `410`、未知帧 `404`、相机离线 `503` |
+| POST `/api/vision/stereo/control` | `{sessionId,action,exposureMs?}` | `pause/resume/set-exposure`；曝光 0.1–50 ms，记录操作日志 |
+| GET `/api/ptz` | 无 | `ptz-1` 水平和俯仰轴能力；始终为 `reserved/configured:false` |
+| POST `/api/ptz/commands` | 标准命令信封 | 复用主命令入口校验；未配置时 `NOT_CONFIGURED` |
 
 请求体最多 16 KiB；设备和日志历史有界。模拟相机是独立小型资源，不经过控制命令队列，不使用摄像头权限、视频编码或无界流。
 
@@ -46,10 +51,14 @@
 | `stop` | 机械臂、小车 | `{}`；任一有效会话可请求软件停止，不授予控制权 |
 | `release` | 机械臂、小车 | `{}`；停止、禁用并释放控制权 |
 | `jog` | `arm-1` | `jointId:joint-1..joint-5`, `delta:度`, `speed:度/秒`；按速率逐步到达限位内目标 |
+| `cartesian-jog` | `arm-1` | `frame:base`, `axis:x/y/z`, `deltaMm:毫米`, `speedMmS:毫米/秒`；步长绝对值 ≤10 mm，速度 >0 且 ≤30 mm/s |
 | `grip` | `arm-1` | `position:0..100`，百分比开度；模拟最大速率 60%/秒 |
 | `drive` | `car-1` | `linear:米/秒`, `angular:弧度/秒`；最大绝对值 0.3 与 0.8 |
+| `ptz-jog` | `ptz-1` 预留 | `axis:pan/tilt`, `deltaDeg:度`, `speedDegS:度/秒`；未配置硬件时拒绝，不运动 |
 
 非有限数字、类型错误、越界位置与超速均拒绝；拒绝不改变当前运动目标或位置。下发零速度也执行停止并禁用。相机 `camera-1` 没有运动控制权。
+
+坐标点动以基座 X 前、Y 左、Z 上为参考，先检查整段路径的解析极值、奇异点和逆解，再沿笛卡尔直线插补。保持末端俯仰与滚转，偏航随基座旋转；不能提供任意六自由度姿态约束。关节、夹爪和坐标目标的冲突会取消旧命令并标记失败；被拒绝的新轨迹保留旧目标。具体模型与扩展接口见 [坐标、双目和云台说明](../docs/EXTENSIONS.md)。
 
 ## 有效期与三个停止层
 
@@ -65,10 +74,12 @@
 
 ## 状态、生命周期和错误
 
-`/api/state` 中每个设备包含 `id/name/type/mode/connected/enabled/fault/owned/ownerLabel/generation/updatedAt/lastSeenAt/stopReason`。`fault` 为 `null` 或 `{code,message}`。机械臂附 `joints[{id,name,position,min,max,maxSpeed}]` 和 `gripper`；小车附 `velocity/pose/limits`。单位见上表。真实硬件永远不显示已连接。
+`/api/state` 中每个设备包含 `id/name/type/mode/connected/enabled/fault/owned/ownerLabel/generation/updatedAt/lastSeenAt/stopReason`。`fault` 为 `null` 或 `{code,message}`。机械臂附 `joints[{id,name,position,min,max,maxSpeed}]`、`gripper`、正运动学 `endEffector`、`linkPointsMm` 和 `kinematics`；小车附 `velocity/pose/limits`。顶层 `capabilities` 提供双目与云台端口。单位见上表。真实硬件永远不显示已连接。
 
 命令记录包含 `commandId/deviceId/action/sequence/sessionLabel/status/receivedAt/updatedAt/transitions`。状态为 `received → executing → completed`，或 `received → rejected`，或运动被打断后的 `failed`。每次转换有独立时间；HTTP 接收不等于完成。关节和夹爪到达目标后才 `completed`；`drive` 的 `completed` 仅表示设备已经应用速度意图，不表示行程完成。停止、断线、目标被覆盖会让原未完成运动记录变为 `failed`。
 
 设备状态新鲜度基于 `lastSeenAt`；UI 只在连接正常且状态未超过 1500 ms 时显示在线。网络失败后控件禁用，重新连接不回放先前动作。
 
 常用错误码：`PROTOCOL_VERSION`、`INVALID_COMMAND`、`INVALID_JSON`、`BODY_TOO_LARGE`、`SESSION_EXPIRED`、`CLOCK_EXPIRED`、`EXPIRED`、`OUT_OF_ORDER`、`DUPLICATE_CONFLICT`、`UNKNOWN_DEVICE`、`NOT_OWNER`、`BUSY`、`NOT_ENABLED`、`OFFLINE`、`DEVICE_FAULT`、`OUT_OF_RANGE`、`INVALID_JOINT`、`UNSUPPORTED_ACTION`、`STALE_GENERATION`、`DEVICE_TIMEOUT`、`DEVICE_UNAVAILABLE`。HTTP 错误响应为 `{error:{code,message},command?}`；被拒绝命令和原因保留在日志中。
+
+扩展错误码：`INVALID_CARTESIAN_PARAMS`、`WORKSPACE_LIMIT`、`IK_UNREACHABLE`、`JOINT_LIMIT`、`INVALID_VISION_ACTION`、`CAMERA_OFFLINE`、`FRAME_NOT_FOUND`、`FRAME_EXPIRED`、`NOT_CONFIGURED`。PTZ 始终先经过标准信封的协议、会话、时钟、序号与幂等校验，再返回未配置错误。

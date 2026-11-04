@@ -4,11 +4,17 @@ import {
   validateEnvelope,
   fingerprint as commandFingerprint,
 } from "../../protocol/validation.js";
+import {
+  forwardKinematics,
+  planCartesianJog,
+  interpolateCartesian,
+  linkPoints,
+} from "./kinematics.js";
 
 export const simulationConfig = JSON.parse(
   readFileSync(new URL("./config.json", import.meta.url), "utf8"),
 );
-const motionActions = new Set(["jog", "grip", "drive"]);
+const motionActions = new Set(["jog", "grip", "drive", "cartesian-jog"]);
 const finite = (value) => typeof value === "number" && Number.isFinite(value);
 const error = (code, message) => Object.assign(new Error(message), { code });
 const clone = (value) => structuredClone(value);
@@ -104,9 +110,10 @@ export class DeviceAdapter {
           } else {
             if (!device.enabled)
               throw error("NOT_ENABLED", "设备未启用，请显式启用控制");
-            this.validateMotion(device, command);
+            const prepared = this.validateMotion(device, command);
             device.commandStatus =
-              this.applyMotion(device, command)?.status ?? "completed";
+              this.applyMotion(device, command, prepared)?.status ??
+              "completed";
           }
         }
       }
@@ -145,6 +152,9 @@ export class DeviceAdapter {
 
   validateMotion(device, command) {
     const p = command.params;
+    if (command.action === "cartesian-jog" && device.type === "arm") {
+      return planCartesianJog(device.joints, device.kinematics, p);
+    }
     if (command.action === "jog" && device.type === "arm") {
       const joint = device.joints.find((item) => item.id === p.jointId);
       if (!joint) throw error("INVALID_JOINT", "关节不存在");
@@ -282,10 +292,17 @@ export class DeviceAdapter {
         motionDeadline,
         targets,
         gripperTarget,
+        cartesianTrajectory,
         ...state
       } = clone(device);
       return {
         ...state,
+        ...(state.type === "arm" && state.kinematics
+          ? {
+              endEffector: forwardKinematics(state.joints, state.kinematics),
+              linkPointsMm: linkPoints(state.joints, state.kinematics),
+            }
+          : {}),
         leaseRemainingMs:
           leaseDeadline == null
             ? 0
@@ -324,6 +341,7 @@ export class SimulatorAdapter extends DeviceAdapter {
       joints: clone(this.config.joints),
       gripper: clone(this.config.gripper),
       targets: {},
+      kinematics: clone(this.config.kinematics),
     });
     this.devices.set("car-1", {
       ...clone(common),
@@ -344,8 +362,33 @@ export class SimulatorAdapter extends DeviceAdapter {
     });
   }
 
-  applyMotion(device, command) {
+  applyMotion(device, command, prepared) {
+    if (command.action === "cartesian-jog") {
+      // The complete path is validated before touching any existing motion target.
+      this.cancelCartesian(device, "末端目标被新命令替换");
+      for (const target of Object.values(device.targets))
+        this.finishCommand(device, target, false, "关节目标被末端直线点动替换");
+      device.targets = {};
+      if (device.gripperTarget) {
+        this.finishCommand(
+          device,
+          device.gripperTarget,
+          false,
+          "夹爪目标被末端直线点动替换",
+        );
+        delete device.gripperTarget;
+      }
+      if (prepared.distanceMm === 0) return { status: "completed" };
+      device.cartesianTrajectory = {
+        plan: prepared,
+        progressMm: 0,
+        commandId: command.commandId,
+        sessionId: command.sessionId,
+      };
+      return { status: "executing" };
+    }
     if (command.action === "jog") {
+      this.cancelCartesian(device, "末端轨迹被关节点动替换");
       const old = device.targets[command.params.jointId];
       if (old) this.finishCommand(device, old, false, "关节目标被新命令替换");
       delete device.targets[command.params.jointId];
@@ -361,6 +404,7 @@ export class SimulatorAdapter extends DeviceAdapter {
       return { status: "executing" };
     }
     if (command.action === "grip") {
+      this.cancelCartesian(device, "末端轨迹被夹爪操作替换");
       if (device.gripperTarget)
         this.finishCommand(
           device,
@@ -400,6 +444,9 @@ export class SimulatorAdapter extends DeviceAdapter {
         Math.sin(device.pose.heading) * device.velocity.linear * dt;
       moved = device.velocity.linear !== 0 || device.velocity.angular !== 0;
     } else if (device.type === "arm") {
+      if (device.cartesianTrajectory && dt > 0) {
+        moved = this.tickCartesian(device, dt);
+      }
       for (const joint of device.joints) {
         const target = device.targets[joint.id];
         if (!target) continue;
@@ -431,6 +478,65 @@ export class SimulatorAdapter extends DeviceAdapter {
     if (moved) device.updatedAt = new Date().toISOString();
   }
 
+  cancelCartesian(device, reason) {
+    if (!device.cartesianTrajectory) return;
+    this.finishCommand(device, device.cartesianTrajectory, false, reason);
+    delete device.cartesianTrajectory;
+  }
+
+  tickCartesian(device, dt) {
+    const trajectory = device.cartesianTrajectory;
+    const { plan, progressMm } = trajectory;
+    const wanted = Math.min(plan.distanceMm, progressMm + plan.speedMmS * dt);
+    const solve = (distance) =>
+      interpolateCartesian(plan, distance, device.kinematics, device.joints);
+    const respectsRates = (positions) =>
+      positions.every(
+        (position, index) =>
+          Math.abs(position - device.joints[index].position) <=
+          device.joints[index].maxSpeed * dt + 1e-10,
+      );
+    let distance = wanted;
+    let positions;
+    try {
+      positions = solve(wanted);
+      if (!respectsRates(positions)) {
+        // Slow the Cartesian path parameter, never interpolate joint endpoints.
+        // Every published configuration is an IK solution on the same straight line.
+        let low = progressMm;
+        let high = wanted;
+        for (let i = 0; i < 40; i++) {
+          const middle = (low + high) / 2;
+          if (respectsRates(solve(middle))) low = middle;
+          else high = middle;
+        }
+        distance = low;
+        positions = solve(distance);
+      }
+    } catch (err) {
+      device.fault = {
+        code: err.code ?? "IK_UNREACHABLE",
+        message: err.message,
+      };
+      this.stopDevice(device, "模拟末端轨迹执行失败", false);
+      return false;
+    }
+    positions.forEach((position, index) => {
+      device.joints[index].position = position;
+    });
+    trajectory.progressMm = distance;
+    if (plan.distanceMm - distance <= 1e-9) {
+      delete device.cartesianTrajectory;
+      this.finishCommand(
+        device,
+        trajectory,
+        true,
+        "末端直线点动已到达模拟目标",
+      );
+    }
+    return distance > progressMm;
+  }
+
   finishCommand(device, target, completed, message) {
     this.onEvent({
       deviceId: device.id,
@@ -448,6 +554,7 @@ export class SimulatorAdapter extends DeviceAdapter {
       delete device.motionDeadline;
     }
     if (device.type === "arm") {
+      this.cancelCartesian(device, reason);
       for (const target of Object.values(device.targets))
         this.finishCommand(device, target, false, reason);
       if (device.gripperTarget)

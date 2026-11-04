@@ -1930,3 +1930,803 @@ h1 {
     transition: none !important;
   }
 }
+/* Cartesian controls, synchronized stereo views and reserved pan/tilt capability. */
+.workspace-card {
+  display: flex;
+  flex-direction: column;
+}
+.simulation-stage {
+  flex: 1;
+  min-height: 337px;
+}
+.end-effector-strip {
+  display: grid;
+  grid-template-columns: 1.15fr repeat(3, 1fr);
+  gap: 8px;
+  align-items: center;
+  padding: 17px 21px;
+  border-bottom: 1px solid var(--line);
+  background: #fcfdfd;
+}
+.eef-label > span {
+  display: block;
+  font-size: 10px;
+  color: #617c89;
+}
+.eef-label > small {
+  display: block;
+  font-size: 7px;
+  color: #a3b1b8;
+  margin-top: 6px;
+}
+.end-effector-strip > div:not(:first-child) {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+.end-effector-strip b {
+  font-size: 15px;
+  font-weight: 500;
+  color: #5b7886;
+  font-variant-numeric: tabular-nums;
+}
+.end-effector-strip small {
+  font-size: 8px;
+  color: #a6b5bd;
+}
+.axis-label {
+  font-size: 10px;
+  font-weight: 550;
+}
+.axis-x {
+  color: #b4786a;
+}
+.axis-y {
+  color: #4d9b84;
+}
+.axis-z {
+  color: #6d94b2;
+}
+.arm-mode-tabs {
+  display: flex;
+  margin: 0 20px 18px;
+  padding: 3px;
+  border: 1px solid #e9eff1;
+  border-radius: 6px;
+  background: #f5f8f9;
+  gap: 4px;
+}
+.arm-mode-tab {
+  flex: 1;
+  border: 0;
+  color: #96a7b0;
+  background: none;
+  padding: 9px 4px;
+  font-size: 10px;
+  border-radius: 4px;
+}
+.arm-mode-tab.active {
+  background: #fff;
+  color: #3e8f7e;
+  box-shadow: 0 1px 4px #254f5e12;
+}
+.cartesian-axis-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 3px 20px 10px;
+}
+.cartesian-axis-row {
+  display: grid;
+  grid-template-columns: 62px 1fr 1fr;
+  gap: 9px;
+  align-items: center;
+}
+.cartesian-axis-row .axis-label small {
+  font-size: 8px;
+  font-weight: 400;
+  color: #9fb0ba;
+  margin-left: 7px;
+}
+.cartesian-button {
+  border: 1px solid #dce9e9;
+  background: #f7fbfa;
+  color: #4b8f82;
+  font-size: 10px;
+  padding: 11px 4px;
+  border-radius: 5px;
+}
+.cartesian-button:hover:enabled {
+  border-color: #97c9ba;
+  background: #edf8f3;
+}
+.cartesian-settings {
+  display: flex;
+  gap: 15px;
+  margin: 9px 21px 14px;
+}
+.cartesian-settings > label {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 9px;
+  color: #8fa3ad;
+}
+.cartesian-settings select {
+  background: #fff;
+  border: 1px solid #e2eaed;
+  border-radius: 4px;
+  color: #688592;
+  font-size: 9px;
+  padding: 6px;
+  min-width: 0;
+}
+.model-hint {
+  font-size: 8px;
+  color: #a0b0b7;
+  line-height: 1.8;
+  margin: 0 21px 17px;
+}
+.camera-actions {
+  display: flex;
+  gap: 7px;
+}
+.stereo-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 21px 13px;
+  gap: 10px;
+}
+.camera-view-tabs {
+  display: flex;
+  gap: 4px;
+  border: 1px solid #e7eef0;
+  border-radius: 5px;
+  padding: 3px;
+  background: #f7f9fa;
+}
+.camera-view-tab {
+  border: 0;
+  background: none;
+  color: #9aabb5;
+  font-size: 9px;
+  padding: 6px 15px;
+  border-radius: 3px;
+}
+.camera-view-tab.active {
+  background: #fff;
+  color: #368f7c;
+  box-shadow: 0 1px 3px #163c4d12;
+}
+.stereo-toolbar > span {
+  font:
+    8px ui-monospace,
+    monospace;
+  color: #9cafb9;
+  letter-spacing: 0.3px;
+}
+.stereo-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 12px 21px 17px;
+  font-size: 8px;
+  color: #6da495;
+}
+.stereo-status > span:last-child {
+  color: #a5b0b8;
+}
+.stereo-status .unavailable {
+  color: #c1826b;
+}
+.vision-target-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 9px;
+  color: #758f9d;
+  margin: 0 21px 9px;
+  gap: 6px;
+}
+.vision-target-header small {
+  font-size: 7px;
+  color: #adbac1;
+  margin-left: 7px;
+}
+.vision-target-header > span:last-child {
+  font-size: 7px;
+  color: #a9b6bf;
+}
+.vision-targets {
+  margin: 0 21px;
+  min-height: 86px;
+}
+.vision-target {
+  display: grid;
+  grid-template-columns: minmax(95px, 1fr) minmax(100px, 1.5fr) 65px;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 0;
+  border-top: 1px solid #edf2f4;
+  font-size: 9px;
+  color: #78909e;
+}
+.vision-target-name {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #526f7e;
+}
+.target-swatch {
+  width: 6px;
+  height: 6px;
+  border-radius: 2px;
+  background: #63b79f;
+}
+.vision-target-box {
+  font:
+    7px/1.7 ui-monospace,
+    monospace;
+  color: #a0b0b9;
+}
+.vision-target-depth {
+  font-size: 13px;
+  color: #5b8e83;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.vision-target-depth small {
+  font-size: 7px;
+  margin-left: 3px;
+  color: #9fafaf;
+}
+.vision-empty {
+  font-size: 9px;
+  color: #a9b8c1;
+  min-height: 65px;
+  padding-top: 19px;
+  border-top: 1px solid #edf2f4;
+  text-align: center;
+  line-height: 1.8;
+}
+.camera-capture-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 21px 0;
+  border-top: 1px solid #edf2f4;
+}
+.camera-capture-row > div {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.camera-capture-row .text-button {
+  display: inline-block;
+  margin: 0;
+  font-size: 8px;
+  color: #72988f;
+}
+.camera-capture-row > label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 8px;
+  color: #a0b0b8;
+}
+.camera-capture-row input {
+  height: 3px;
+  min-width: 0;
+  width: 60px;
+  accent-color: #429c88;
+}
+.camera-capture-row output {
+  min-width: 31px;
+  font:
+    7px ui-monospace,
+    monospace;
+  color: #8aa2ad;
+}
+.auxiliary-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+.ptz-card {
+  margin-top: auto;
+}
+.ptz-state {
+  font-size: 8px;
+  color: #a3afb8;
+  white-space: nowrap;
+}
+.ptz-controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  padding: 0 22px 17px;
+  gap: 25px;
+}
+.ptz-controls > div {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 10px;
+}
+.ptz-controls > div > span {
+  font-size: 9px;
+  color: #8fa3ad;
+}
+.ptz-controls b {
+  font-size: 10px;
+  color: #b5c0c7;
+  font-weight: 400;
+}
+.ptz-controls > div > div {
+  grid-column: 1/-1;
+  display: flex;
+  gap: 6px;
+}
+.ptz-controls .button {
+  flex: 1;
+  font-size: 13px;
+  padding: 5px 10px;
+  background: #f8fafb;
+  border-color: #e8eef1;
+  color: #a9bac4;
+}
+.ptz-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 8px;
+  color: #acb9c1;
+  border-top: 1px solid #eef2f4;
+  padding: 13px 22px;
+  line-height: 1.7;
+}
+.ptz-footer a {
+  color: #89a8ad;
+  white-space: nowrap;
+}
+.ptz-footer a:hover {
+  text-decoration: underline;
+}
+@media (max-width: 1180px) {
+  .end-effector-strip {
+    padding-inline: 16px;
+  }
+  .end-effector-strip b {
+    font-size: 12px;
+  }
+  .end-effector-strip .axis-label {
+    font-size: 8px;
+  }
+  .eef-label > span {
+    font-size: 9px;
+  }
+  .eef-label > small {
+    font-size: 6px;
+  }
+  .cartesian-axis-grid {
+    padding-inline: 16px;
+  }
+  .cartesian-axis-row {
+    grid-template-columns: 58px 1fr 1fr;
+    gap: 6px;
+  }
+  .cartesian-settings {
+    margin-inline: 16px;
+    gap: 8px;
+  }
+  .cartesian-settings > label {
+    font-size: 8px;
+    gap: 5px;
+  }
+  .vision-target-header small {
+    display: block;
+    margin: 5px 0 0;
+  }
+  .camera-capture-row {
+    flex-wrap: wrap;
+    gap: 15px;
+  }
+  .camera-capture-row > label {
+    margin-left: auto;
+  }
+  .vision-target {
+    grid-template-columns: minmax(70px, 1fr) minmax(105px, 1.4fr) 48px;
+    gap: 5px;
+  }
+  .vision-target-depth {
+    font-size: 11px;
+  }
+  .camera-view-tab {
+    padding-inline: 11px;
+  }
+  .ptz-controls {
+    gap: 18px;
+  }
+  .end-effector-strip {
+    grid-template-columns: 1.15fr repeat(3, 1fr);
+    gap: 5px;
+  }
+}
+@media (max-width: 960px) {
+  .end-effector-strip {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+  .end-effector-strip .eef-label {
+    grid-column: 1/-1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .eef-label > small {
+    margin-top: 0;
+    font-size: 7px;
+  }
+  .end-effector-strip > div:not(:first-child) {
+    gap: 4px;
+  }
+  .end-effector-strip b {
+    font-size: 13px;
+  }
+  .stereo-toolbar {
+    margin-inline: 15px;
+  }
+  .camera-view-tab {
+    padding: 6px 10px;
+  }
+  .stereo-toolbar > span {
+    font-size: 6px;
+  }
+  .stereo-status {
+    margin-inline: 15px;
+    gap: 6px;
+    font-size: 7px;
+  }
+  .vision-targets,
+  .vision-target-header {
+    margin-inline: 15px;
+  }
+  .camera-capture-row {
+    padding-inline: 15px;
+  }
+  .vision-target-header > span:last-child {
+    font-size: 6px;
+  }
+  .vision-target-box {
+    font-size: 6px;
+  }
+  .vision-target {
+    grid-template-columns: minmax(65px, 0.9fr) minmax(86px, 1.5fr) 42px;
+  }
+  .vision-target-name {
+    font-size: 8px;
+    gap: 5px;
+  }
+  .vision-target-depth {
+    font-size: 10px;
+  }
+  .ptz-controls {
+    padding-inline: 17px;
+    gap: 15px;
+  }
+  .ptz-controls > div > span {
+    font-size: 8px;
+  }
+  .ptz-footer {
+    font-size: 7px;
+    padding-inline: 17px;
+  }
+  .ptz-card .card-header h2 {
+    gap: 5px;
+    font-size: 11px;
+  }
+  .ptz-state {
+    font-size: 7px;
+  }
+}
+@media (max-width: 760px) {
+  .simulation-stage {
+    min-height: 320px;
+  }
+  .end-effector-strip {
+    grid-template-columns: 1.15fr repeat(3, 1fr);
+    padding-inline: 22px;
+    gap: 10px;
+  }
+  .end-effector-strip .eef-label {
+    grid-column: auto;
+    display: block;
+  }
+  .eef-label > small {
+    margin-top: 6px;
+  }
+  .end-effector-strip b {
+    font-size: 15px;
+  }
+  .end-effector-strip .axis-label {
+    font-size: 9px;
+  }
+  .arm-mode-tabs {
+    margin-inline: 22px;
+  }
+  .arm-mode-tab {
+    padding: 11px;
+    font-size: 11px;
+  }
+  .cartesian-axis-grid {
+    padding-inline: 22px;
+    gap: 14px;
+  }
+  .cartesian-axis-row {
+    grid-template-columns: 75px 1fr 1fr;
+    gap: 10px;
+  }
+  .cartesian-axis-row .axis-label {
+    font-size: 12px;
+  }
+  .cartesian-axis-row .axis-label small {
+    font-size: 9px;
+  }
+  .cartesian-button {
+    padding: 14px 7px;
+    font-size: 11px;
+  }
+  .cartesian-settings {
+    margin: 15px 22px 18px;
+    gap: 20px;
+  }
+  .cartesian-settings > label {
+    font-size: 10px;
+  }
+  .cartesian-settings select {
+    font-size: 10px;
+    padding: 8px;
+  }
+  .model-hint {
+    font-size: 9px;
+    margin-inline: 22px;
+  }
+  .stereo-toolbar,
+  .stereo-status,
+  .vision-targets,
+  .vision-target-header {
+    margin-inline: 21px;
+  }
+  .stereo-toolbar > span {
+    font-size: 8px;
+  }
+  .camera-view-tab {
+    padding: 7px 15px;
+    font-size: 10px;
+  }
+  .stereo-status {
+    font-size: 8px;
+  }
+  .vision-target-header {
+    font-size: 10px;
+  }
+  .vision-target-header small {
+    display: inline;
+    font-size: 7px;
+    margin-left: 7px;
+  }
+  .vision-target {
+    grid-template-columns: 1fr 1.7fr 65px;
+    gap: 8px;
+    padding: 13px 0;
+  }
+  .vision-target-name {
+    font-size: 10px;
+  }
+  .vision-target-box {
+    font-size: 8px;
+  }
+  .vision-target-depth {
+    font-size: 14px;
+  }
+  .camera-capture-row {
+    padding-inline: 21px;
+    flex-wrap: nowrap;
+  }
+  .camera-capture-row .text-button {
+    font-size: 9px;
+  }
+  .camera-capture-row > label {
+    font-size: 9px;
+  }
+  .camera-capture-row input {
+    width: 70px;
+  }
+  .ptz-controls {
+    padding-inline: 21px;
+    gap: 28px;
+  }
+  .ptz-controls > div > span {
+    font-size: 10px;
+  }
+  .ptz-state {
+    font-size: 9px;
+  }
+  .ptz-card .card-header h2 {
+    font-size: 13px;
+  }
+  .ptz-footer {
+    font-size: 9px;
+    padding-inline: 21px;
+  }
+  .auxiliary-stack {
+    gap: 20px;
+  }
+}
+@media (max-width: 480px) {
+  .simulation-stage {
+    min-height: 265px;
+  }
+  .end-effector-strip {
+    padding: 15px 17px;
+    gap: 8px;
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .end-effector-strip .eef-label {
+    grid-column: 1/-1;
+    display: flex;
+  }
+  .eef-label > small {
+    margin-top: 0;
+    font-size: 7px;
+  }
+  .end-effector-strip b {
+    font-size: 13px;
+  }
+  .arm-mode-tabs {
+    margin-inline: 17px;
+  }
+  .arm-mode-tab {
+    font-size: 10px;
+    padding: 9px;
+  }
+  .cartesian-axis-grid {
+    padding-inline: 17px;
+  }
+  .cartesian-axis-row {
+    grid-template-columns: 64px 1fr 1fr;
+    gap: 7px;
+  }
+  .cartesian-axis-row .axis-label {
+    font-size: 10px;
+  }
+  .cartesian-axis-row .axis-label small {
+    font-size: 7px;
+    margin-left: 5px;
+  }
+  .cartesian-button {
+    font-size: 9px;
+    padding: 12px 3px;
+  }
+  .cartesian-settings {
+    margin-inline: 17px;
+    gap: 14px;
+  }
+  .cartesian-settings > label {
+    font-size: 8px;
+    gap: 6px;
+  }
+  .cartesian-settings select {
+    font-size: 9px;
+    padding: 7px 4px;
+  }
+  .model-hint {
+    font-size: 8px;
+    margin-inline: 17px;
+  }
+  .stereo-toolbar,
+  .stereo-status,
+  .vision-targets,
+  .vision-target-header {
+    margin-inline: 16px;
+  }
+  .camera-actions {
+    gap: 5px;
+  }
+  .camera-card .card-header h2 {
+    font-size: 11px;
+    gap: 6px;
+  }
+  .camera-card .card-header p {
+    font-size: 7px;
+    max-width: 172px;
+    line-height: 1.7;
+  }
+  .camera-actions .button {
+    padding: 6px !important;
+    font-size: 8px !important;
+  }
+  .camera-actions .icon {
+    width: 11px;
+    height: 11px;
+  }
+  .camera-view-tab {
+    font-size: 9px;
+    padding: 6px 12px;
+  }
+  .stereo-toolbar > span {
+    font-size: 7px;
+  }
+  .stereo-status {
+    font-size: 7px;
+    gap: 8px;
+    line-height: 1.8;
+  }
+  .vision-target-header {
+    font-size: 9px;
+    align-items: flex-start;
+  }
+  .vision-target-header small {
+    display: block;
+    font-size: 6px;
+    margin: 5px 0 0;
+  }
+  .vision-target-header > span:last-child {
+    font-size: 6px;
+  }
+  .vision-target {
+    grid-template-columns: minmax(68px, 0.9fr) minmax(90px, 1.4fr) 49px;
+    gap: 5px;
+  }
+  .vision-target-name {
+    font-size: 8px;
+  }
+  .vision-target-box {
+    font-size: 6px;
+  }
+  .vision-target-depth {
+    font-size: 11px;
+  }
+  .camera-capture-row {
+    padding-inline: 16px;
+    flex-wrap: wrap;
+    gap: 15px;
+  }
+  .camera-capture-row .text-button {
+    font-size: 8px;
+  }
+  .camera-capture-row > label {
+    font-size: 8px;
+  }
+  .camera-capture-row input {
+    width: 70px;
+  }
+  .camera-capture-row output {
+    font-size: 7px;
+  }
+  .ptz-card .card-header h2 {
+    font-size: 11px;
+  }
+  .ptz-state {
+    font-size: 8px;
+  }
+  .ptz-controls {
+    padding-inline: 17px;
+    gap: 20px;
+  }
+  .ptz-controls > div > span {
+    font-size: 9px;
+  }
+  .ptz-footer {
+    font-size: 8px;
+    padding-inline: 17px;
+  }
+}
