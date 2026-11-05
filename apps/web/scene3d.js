@@ -55,10 +55,14 @@ export function createWorld() {
     ctx.fillText(text, 256, 62);
     const texture = new T.CanvasTexture(c),
       sprite = new T.Sprite(
-        new T.SpriteMaterial({ map: texture, depthTest: false }),
+        new T.SpriteMaterial({
+          map: texture,
+          depthTest: false,
+          sizeAttenuation: false,
+        }),
       );
     sprite.position.copy(position);
-    sprite.scale.set(0.55, 0.103, 1);
+    sprite.scale.set(0.32, 0.06, 1);
     scene.add(sprite);
   }
   const armRoot = new T.Group();
