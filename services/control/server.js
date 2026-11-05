@@ -477,6 +477,23 @@ export async function createControlServer({
         return send(404, {
           error: { code: "NOT_FOUND", message: "接口不存在" },
         });
+      if (
+        request.method === "GET" &&
+        [
+          "/vendor/three/three.module.js",
+          "/vendor/three/three.core.js",
+        ].includes(path)
+      ) {
+        const name = path.split("/").at(-1);
+        const data = await readFile(
+          new URL(`../../node_modules/three/build/${name}`, import.meta.url),
+        );
+        response.writeHead(200, {
+          "Content-Type": "text/javascript; charset=utf-8",
+          "Cache-Control": "public, max-age=3600",
+        });
+        return response.end(data);
+      }
       if (request.method !== "GET" && request.method !== "HEAD")
         return send(405, {
           error: { code: "METHOD_NOT_ALLOWED", message: "不支持的方法" },

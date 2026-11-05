@@ -1,4 +1,14 @@
 const $ = (selector) => document.querySelector(selector);
+let world3d;
+import("./scene3d.js")
+  .then(({ createWorld }) => {
+    world3d = createWorld();
+    if (state.snapshot) world3d.update(state.snapshot);
+  })
+  .catch(() => {
+    document.querySelector("#world-message").textContent =
+      "3D 场景不可用，请使用下方二维反馈；设备控制不受影响。";
+  });
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 const escapeHtml = (value) =>
   String(value ?? "").replace(
@@ -300,6 +310,7 @@ async function pollState() {
   try {
     const snapshot = await request("/api/state");
     state.snapshot = snapshot;
+    world3d?.update(snapshot);
     state.receivedAt = performance.now();
     state.connected = Boolean(state.session);
     state.timing = { ...state.timing, ...snapshot.timing };

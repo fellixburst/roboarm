@@ -238,6 +238,58 @@
                 <span>ROVER</span>
               </button>
             </div>
+            <section class="world-card" aria-label="三维设备模拟场景">
+              <div class="card-header">
+                <div>
+                  <h2>
+                    3D 模拟空间
+                    <span class="tag tag-amber">服务端状态驱动</span>
+                  </h2>
+                  <p>
+                    拖动旋转 · 滚轮或双指缩放 · 在下方控制设备，观察空间里的动作
+                  </p>
+                </div>
+                <div class="world-actions">
+                  <button
+                    class="button button-small button-outline"
+                    data-world-view="all"
+                  >
+                    全景</button
+                  ><button
+                    class="button button-small button-outline"
+                    data-world-view="arm"
+                  >
+                    机械臂</button
+                  ><button
+                    class="button button-small button-outline"
+                    data-world-view="car"
+                  >
+                    小车</button
+                  ><button
+                    class="button button-small button-outline"
+                    id="world-clear"
+                  >
+                    清除轨迹
+                  </button>
+                </div>
+              </div>
+              <div id="world-viewport">
+                <div id="world-message" role="status">
+                  正在加载三维场景，二维反馈仍可使用
+                </div>
+                <div class="world-legend">
+                  <span>● 机械臂末端轨迹</span><span>● 小车运动轨迹</span
+                  ><span>X 前 · Y 左 · Z 上</span>
+                </div>
+              </div>
+              <div class="world-feedback">
+                <span id="world-status">等待设备状态</span
+                ><span id="world-command">尚无命令</span>
+              </div>
+              <p class="world-note">
+                简化几何模拟，无碰撞或自动抓取仿真。机械臂与小车分开展示；道具位置为布置示意，尚未与双目相机外参配准。
+              </p>
+            </section>
             <div class="simulation-stage" id="simulation-stage">
               <div class="stage-label">
                 <span class="dot"></span>实时模拟视图 <span>SIMULATION</span>
