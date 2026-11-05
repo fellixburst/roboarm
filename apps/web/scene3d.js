@@ -144,12 +144,12 @@ export function createWorld() {
     }),
   );
   ball.name = "orange-rubber-ball";
-  // Base frame: X=250 mm, Y=100 mm, Z=30 mm (scene Y is up).
-  ball.position.set(0.25, 0.03, -0.1);
-  label("橙色橡胶球 · 模拟目标", new T.Vector3(0.25, 0.14, -0.1), "#ffb66f");
+  // Base frame: X=220 mm, Y=-140 mm, Z=30 mm (scene Y is up).
+  ball.position.set(0.22, 0.03, 0.14);
+  label("橙色橡胶球 · 模拟目标", new T.Vector3(0.22, 0.14, 0.14), "#ffb66f");
   const ballInfo = document.createElement("span");
   ballInfo.className = "world-ball-info";
-  ballInfo.textContent = "橙色橡胶球 · 示意直径 60 mm · 基座坐标 (250, 100, 30) mm";
+  ballInfo.textContent = "橙色橡胶球 · 示意直径 60 mm · 基座坐标 (220, -140, 30) mm";
   host.parentElement.querySelector(".world-note").before(ballInfo);
   function trail(color) {
     const geometry = new T.BufferGeometry();
