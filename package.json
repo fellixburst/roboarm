@@ -1,0 +1,23 @@
+{
+  "name": "roboarm-m1-console",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "机械臂与小车 M1 模拟控制台（不连接真实硬件）",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "start": "node --env-file-if-exists=.env services/control/server.js",
+    "dev": "node --env-file-if-exists=.env --watch services/control/server.js",
+    "test": "node --test tests/*.test.js",
+    "test:e2e": "playwright test",
+    "check": "node --check services/control/server.js && node --check apps/web/app.js && node --check apps/web/scene3d.js"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.56.1"
+  },
+  "dependencies": {
+    "three": "0.180.0"
+  }
+}
