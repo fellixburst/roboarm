@@ -133,6 +133,24 @@ export function createWorld() {
   sock.position.set(0.23, 0, -0.43);
   sock.rotation.y = 0.3;
   label("场景道具 · 未配准", new T.Vector3(0.4, 0.18, -0.5), "#bcae8c");
+  // A persistent visual target, recreated on each scene initialization.
+  // Illustrative size/pose only: not a measurement of the user's real ball.
+  const ball = mesh(
+    new T.SphereGeometry(0.03, 40, 28),
+    new T.MeshStandardMaterial({
+      color: 0xff7900,
+      roughness: 0.88,
+      metalness: 0,
+    }),
+  );
+  ball.name = "orange-rubber-ball";
+  // Base frame: X=250 mm, Y=100 mm, Z=30 mm (scene Y is up).
+  ball.position.set(0.25, 0.03, -0.1);
+  label("橙色橡胶球 · 模拟目标", new T.Vector3(0.25, 0.14, -0.1), "#ffb66f");
+  const ballInfo = document.createElement("span");
+  ballInfo.className = "world-ball-info";
+  ballInfo.textContent = "橙色橡胶球 · 示意直径 60 mm · 基座坐标 (250, 100, 30) mm";
+  host.parentElement.querySelector(".world-note").before(ballInfo);
   function trail(color) {
     const geometry = new T.BufferGeometry();
     const line = new T.Line(geometry, new T.LineBasicMaterial({ color }));
