@@ -6,6 +6,8 @@ M1 是可运行的中文模拟控制台：浏览器操作模拟机械臂、底�
 
 ## 启动
 
+准备在家中 Ubuntu 电脑操作时，见 [Ubuntu 本地部署说明](docs/UBUNTU.md)。获取代码后可运行 `bash scripts/start-local.sh`，再在同一台电脑打开本机地址。
+
 需要 Node.js 24 或更新版本；开发与验证使用 `.nvmrc` 中的 Node.js 24.22.1。控制服务使用原生 Node.js；本地提供的 Three.js 0.180.0 用于 3D 渲染，全部依赖版本记录在 `package-lock.json`。
 
 ```bash
